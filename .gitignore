@@ -53,6 +53,7 @@ backend/.DS_Store
 # IDE
 .vscode/
 .idea/
+*.iml
 
 # OS
 .DS_Store
