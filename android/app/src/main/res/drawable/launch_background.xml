@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!-- Belchonok VPN Splash Screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
-
-    <!-- You can insert your own image assets here -->
+    <!-- Оранжевый градиентный фон -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#FFE5CC"
+                android:centerColor="#FFD9B3"
+                android:endColor="#FFCC99"
+                android:type="linear" />
+        </shape>
+    </item>
+    
+    <!-- Иконка приложения (будет добавлена после генерации PNG) -->
     <!-- <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/launch_image" />
+            android:src="@mipmap/ic_launcher" />
     </item> -->
 </layer-list>

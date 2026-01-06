@@ -32,14 +32,17 @@ class VpnProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _servers = await _apiService.getServers();
+      final loadedServers = await _apiService.getServers();
+      // Сохраняем пользовательские серверы (добавленные вручную)
+      final userServers = _servers.where((s) => s.id.startsWith('custom-') || !loadedServers.any((ls) => ls.id == s.id)).toList();
+      // Объединяем загруженные серверы с пользовательскими
+      _servers = [...loadedServers, ...userServers];
       _error = null;
-      debugPrint('Loaded ${_servers.length} servers');
+      debugPrint('Loaded ${loadedServers.length} servers from API, ${userServers.length} custom servers');
     } catch (e) {
       _error = 'Failed to load servers: ${e.toString()}';
       debugPrint('Error loading servers: $_error');
-      // Если серверы не загрузились, оставляем пустой список
-      // но не показываем критическую ошибку, так как есть fallback
+      // Если серверы не загрузились, оставляем существующий список (включая пользовательские)
       if (_servers.isEmpty) {
         _error = 'Unable to connect to backend. Using default servers.';
       }
@@ -74,6 +77,21 @@ class VpnProvider with ChangeNotifier {
     if (index != -1) {
       // В реальном приложении здесь будет обновление ping
       notifyListeners();
+    }
+  }
+
+  void addServer(VlessServer server) {
+    // Проверяем, нет ли уже сервера с таким же адресом и портом
+    final exists = _servers.any((s) => 
+      s.address == server.address && s.port == server.port && s.uuid == server.uuid
+    );
+    
+    if (!exists) {
+      _servers.add(server);
+      notifyListeners();
+      debugPrint('Server added: ${server.name}');
+    } else {
+      debugPrint('Server already exists: ${server.name}');
     }
   }
 

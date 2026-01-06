@@ -4,6 +4,7 @@ import 'package:animations/animations.dart';
 import '../providers/vpn_provider.dart';
 import '../models/vpn_status.dart';
 import '../theme/app_colors.dart';
+import '../widgets/settings_dialog.dart';
 import 'servers_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -71,33 +72,45 @@ class _HomeScreenState extends State<HomeScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'VPN Secure',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGreen,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Belchonok VPN',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Sansation',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkOrange,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _getStatusText(status),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.accentGreen,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 4),
+                Text(
+                  _getStatusText(status),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Sansation',
+                    fontSize: 14,
+                    color: AppColors.accentOrange,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            color: AppColors.darkGreen,
+            color: AppColors.darkOrange,
             onPressed: () {
-              // Навигация к настройкам
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const SettingsDialog();
+                },
+              );
             },
           ),
         ],
@@ -234,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -248,9 +262,10 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Text(
                     status.currentServer!.name,
                     style: const TextStyle(
+                    fontFamily: 'Sansation',
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.darkGreen,
+                      color: AppColors.darkOrange,
                     ),
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -261,9 +276,10 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 16),
             if (status.downloadSpeed != null && status.uploadSpeed != null)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildSpeedInfo('Download', status.downloadSpeed!),
+                  const SizedBox(width: 40),
                   _buildSpeedInfo('Upload', status.uploadSpeed!),
                 ],
               ),
@@ -278,21 +294,26 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildSpeedInfo(String label, int speed) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           _formatSpeed(speed),
+          textAlign: TextAlign.center,
           style: const TextStyle(
+            fontFamily: 'Sansation',
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.darkGreen,
+            color: AppColors.darkOrange,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Sansation',
             fontSize: 12,
-            color: AppColors.accentGreen,
+            color: AppColors.accentOrange,
           ),
         ),
       ],
@@ -308,16 +329,21 @@ class _HomeScreenState extends State<HomeScreen>
           if (status.isConnected && status.connectedAt != null)
             Text(
               'Connected ${_formatDuration(status.connectedAt!)}',
-              style: TextStyle(
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Sansation',
                 fontSize: 12,
-                color: AppColors.accentGreen,
+                color: AppColors.accentOrange,
               ),
             ),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
+            ElevatedButton.icon(
             onPressed: () => _showServerSelection(context, vpnProvider),
             icon: const Icon(Icons.list),
-            label: const Text('Choose Server'),
+            label: Text(
+              'Choose Server',
+              style: const TextStyle(fontFamily: 'Sansation'),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGreen,
               foregroundColor: Colors.white,

@@ -52,18 +52,21 @@ class _ServersScreenState extends State<ServersScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 'Backend недоступен',
-                                style: TextStyle(
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Sansation',
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.darkGreen,
+                                  color: AppColors.darkOrange,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Убедитесь, что backend запущен на порту 3000',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.accentGreen,
+                                style: const TextStyle(
+                                  fontFamily: 'Sansation',
+                                  color: AppColors.accentOrange,
                                   fontSize: 14,
                                 ),
                               ),
@@ -71,7 +74,11 @@ class _ServersScreenState extends State<ServersScreen> {
                               ElevatedButton.icon(
                                 onPressed: () => vpnProvider.loadServers(),
                                 icon: const Icon(Icons.refresh),
-                                label: const Text('Повторить'),
+                                label: Text(
+                                  'Повторить',
+                                  style: const TextStyle(
+                                  fontFamily: 'Sansation',),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primaryGreen,
                                   foregroundColor: Colors.white,
@@ -87,8 +94,15 @@ class _ServersScreenState extends State<ServersScreen> {
                     final currentServer = vpnProvider.status.currentServer;
 
                     if (servers.isEmpty) {
-                      return const Center(
-                        child: Text('No servers available'),
+                      return Center(
+                        child: Text(
+                          'No servers available',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'Sansation',
+                            color: AppColors.darkOrange,
+                          ),
+                        ),
                       );
                     }
 
@@ -125,14 +139,16 @@ class _ServersScreenState extends State<ServersScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Select Server',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkGreen,
+            Text(
+              'Select Server',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Sansation',
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkOrange,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -215,17 +231,19 @@ class _ServersScreenState extends State<ServersScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Row(
                           children: [
                             Expanded(
                               child: Text(
                                 server.name,
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
+                                  fontFamily: 'Sansation',
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: isCurrent ? Colors.white : AppColors.darkGreen,
+                                  color: isCurrent ? Colors.white : AppColors.darkOrange,
                                 ),
                               ),
                             ),
@@ -248,7 +266,9 @@ class _ServersScreenState extends State<ServersScreen> {
                                 ),
                                 child: Text(
                                   'Тест',
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
+                                    fontFamily: 'Sansation',
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: isCurrent ? Colors.white : Colors.orange.shade700,
@@ -260,11 +280,13 @@ class _ServersScreenState extends State<ServersScreen> {
                         const SizedBox(height: 4),
                         Text(
                           server.country,
+                          textAlign: TextAlign.center,
                           style: TextStyle(
+                            fontFamily: 'Sansation',
                             fontSize: 14,
                             color: isCurrent
                                 ? Colors.white70
-                                : AppColors.accentGreen,
+                                : AppColors.accentOrange,
                           ),
                         ),
                       ],
@@ -285,9 +307,11 @@ class _ServersScreenState extends State<ServersScreen> {
                             color: Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Active',
-                            style: TextStyle(
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Sansation',
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -329,10 +353,12 @@ class _ServersScreenState extends State<ServersScreen> {
         const SizedBox(width: 6),
         Text(
           '$ping ms',
+          textAlign: TextAlign.center,
           style: TextStyle(
+            fontFamily: 'Sansation',
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: isCurrent ? Colors.white : AppColors.darkGreen,
+            color: isCurrent ? Colors.white : AppColors.darkOrange,
           ),
         ),
       ],

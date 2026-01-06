@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/vpn_provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => VpnProvider(),
       child: MaterialApp(
-        title: 'VPN Secure',
+        title: 'Belchonok VPN',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
@@ -28,12 +28,16 @@ class MyApp extends StatelessWidget {
             surface: AppColors.white,
           ),
           scaffoldBackgroundColor: AppColors.white,
-          appBarTheme: const AppBarTheme(
+          textTheme: const TextTheme().apply(
+            fontFamily: 'Sansation',
+          ),
+          appBarTheme: AppBarTheme(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            iconTheme: IconThemeData(color: AppColors.darkGreen),
-            titleTextStyle: TextStyle(
-              color: AppColors.darkGreen,
+            iconTheme: const IconThemeData(color: AppColors.darkOrange),
+            titleTextStyle: const TextStyle(
+              fontFamily: 'Sansation',
+              color: AppColors.darkOrange,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -55,7 +59,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }
