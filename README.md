@@ -157,7 +157,7 @@ static const bool useMockData = false; // Использовать реальн�
 - ✅ Android: `BIND_VPN_SERVICE`, `FOREGROUND_SERVICE`, `WAKE_LOCK`
 - ✅ iOS: Network Extensions entitlement
 
-## 📱 Скриншоты
+## 📱 Экраны
 
 Приложение включает:
 - Главный экран с большой кнопкой подключения
