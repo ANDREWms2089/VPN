@@ -1,44 +1,138 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_v2ray/flutter_v2ray.dart';
 import '../models/vless_server.dart';
 import '../models/vpn_status.dart';
+import 'config_generator.dart';
 
+/// VPN Service с использованием flutter_v2ray пакета
+/// Обеспечивает реальное VPN подключение через v2ray/xray core
 class VpnService {
   static final VpnService _instance = VpnService._internal();
   factory VpnService() => _instance;
   VpnService._internal();
 
-  // MethodChannel для связи с нативным кодом
-  static const MethodChannel _channel = MethodChannel('vpn_service');
+  FlutterV2ray? _flutterV2ray;
+  bool _isInitialized = false;
   
   final StreamController<VpnStatus> _statusController =
       StreamController<VpnStatus>.broadcast();
   
   VpnStatus _currentStatus = VpnStatus(status: VpnConnectionStatus.disconnected);
-  Timer? _connectionTimer;
   Timer? _speedTimer;
 
   Stream<VpnStatus> get statusStream => _statusController.stream;
   VpnStatus get currentStatus => _currentStatus;
 
+  /// Инициализация V2Ray (вызывается один раз при запуске приложения)
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      _flutterV2ray = FlutterV2ray(
+        onStatusChanged: _handleV2RayStatusChanged,
+      );
+
+      // Инициализация V2Ray
+      await _flutterV2ray!.initializeV2Ray(
+        notificationIconResourceType: "mipmap",
+        notificationIconResourceName: "ic_launcher",
+      );
+
+      _isInitialized = true;
+      debugPrint('V2Ray initialized successfully');
+    } catch (e) {
+      debugPrint('Error initializing V2Ray: $e');
+      _updateStatus(VpnStatus(
+        status: VpnConnectionStatus.error,
+        errorMessage: 'Failed to initialize V2Ray: $e',
+      ));
+    }
+  }
+
+  /// Обработка изменений статуса от V2Ray
+  void _handleV2RayStatusChanged(V2RayStatus v2rayStatus) {
+    debugPrint('V2Ray status changed: ${v2rayStatus.state}');
+    
+    VpnConnectionStatus vpnStatus;
+    final state = v2rayStatus.state.toUpperCase();
+    
+    switch (state) {
+      case 'CONNECTING':
+        vpnStatus = VpnConnectionStatus.connecting;
+        break;
+      case 'CONNECTED':
+        vpnStatus = VpnConnectionStatus.connected;
+        if (_currentStatus.currentServer != null) {
+          _updateStatus(_currentStatus.copyWith(
+            status: vpnStatus,
+            connectedAt: DateTime.now(),
+            uploadSpeed: v2rayStatus.uploadSpeed,
+            downloadSpeed: v2rayStatus.downloadSpeed,
+          ));
+          _startSpeedMonitoring();
+        }
+        break;
+      case 'DISCONNECTING':
+        vpnStatus = VpnConnectionStatus.disconnecting;
+        break;
+      case 'DISCONNECTED':
+        vpnStatus = VpnConnectionStatus.disconnected;
+        _stopSpeedMonitoring();
+        _updateStatus(VpnStatus(
+          status: vpnStatus,
+          currentServer: null,
+        ));
+        break;
+      case 'FAILED':
+        vpnStatus = VpnConnectionStatus.error;
+        _stopSpeedMonitoring();
+        _updateStatus(VpnStatus(
+          status: vpnStatus,
+          currentServer: _currentStatus.currentServer,
+          errorMessage: 'Connection failed',
+        ));
+        break;
+      default:
+        debugPrint('Unknown V2Ray status: $state');
+        return;
+    }
+    
+    // Обновляем статус если он изменился
+    if (_currentStatus.status != vpnStatus) {
+      _updateStatus(VpnStatus(
+        status: vpnStatus,
+        currentServer: _currentStatus.currentServer,
+      ));
+    }
+  }
+
   /// Проверка разрешения на использование VPN
   /// В Android требуется явное разрешение пользователя
   Future<bool> requestVpnPermission() async {
+    if (_flutterV2ray == null) {
+      await initialize();
+    }
+
     try {
-      final result = await _channel.invokeMethod<bool>('requestVpnPermission');
-      return result ?? false;
+      final hasPermission = await _flutterV2ray!.requestPermission();
+      return hasPermission;
     } catch (e) {
       debugPrint('Error requesting VPN permission: $e');
-      // В режиме симуляции возвращаем true
-      return true;
+      return false;
     }
   }
 
   /// Подключение к VPN серверу
   Future<void> connect(VlessServer server) async {
     if (_currentStatus.isConnecting || _currentStatus.isConnected) {
+      debugPrint('VPN is already connecting or connected');
       return;
+    }
+
+    // Инициализируем если еще не инициализировано
+    if (!_isInitialized) {
+      await initialize();
     }
 
     // Проверяем разрешение на VPN
@@ -47,7 +141,7 @@ class VpnService {
       _updateStatus(VpnStatus(
         status: VpnConnectionStatus.error,
         currentServer: server,
-        errorMessage: 'VPN permission denied',
+        errorMessage: 'VPN permission denied. Please grant VPN permission in system settings.',
       ));
       return;
     }
@@ -58,37 +152,29 @@ class VpnService {
     ));
 
     try {
-      // Генерируем VLESS URL для передачи в нативный код
-      final vlessUrl = server.toVlessUrl();
-      debugPrint('Connecting to VPN: $vlessUrl');
+      // Генерируем config.json для v2ray/xray
+      final configJson = ConfigGenerator.toJsonString(server);
+      debugPrint('Connecting to VPN server: ${server.name}');
+      debugPrint('Generated config: $configJson');
 
-      // В реальном приложении здесь будет вызов нативного VPN API
-      // Для Android: используйте VpnService API
-      // Для iOS: используйте Network Extension API
-      // Для VLESS протокола требуется интеграция с v2ray/xray core
-      
-      // TODO: Интегрировать v2ray/xray core для реального VPN подключения
-      // Пример для Android:
-      // final result = await _channel.invokeMethod('connectVpn', {
-      //   'vlessUrl': vlessUrl,
-      //   'serverConfig': server.toJson(),
-      // });
-      
-      // Временная симуляция (удалите после интеграции реального VPN)
-      await Future.delayed(const Duration(seconds: 2));
+      // Запускаем V2Ray с конфигурацией
+      await _flutterV2ray!.startV2Ray(
+        remark: server.name,
+        config: configJson,
+        blockedApps: null, // Можно указать приложения для исключения
+        bypassSubnets: ['0.0.0.0/0'], // Маршрутизировать весь трафик
+        proxyOnly: false, // Использовать VPN туннель, а не только прокси
+        notificationDisconnectButtonName: "DISCONNECT",
+      );
 
-      _updateStatus(VpnStatus(
-        status: VpnConnectionStatus.connected,
-        currentServer: server,
-        connectedAt: DateTime.now(),
-      ));
-
-      _startSpeedMonitoring();
+      // Статус будет обновлен через callback _handleV2RayStatusChanged
+      debugPrint('V2Ray start command sent');
     } catch (e) {
+      debugPrint('VPN connection error: $e');
       _updateStatus(VpnStatus(
         status: VpnConnectionStatus.error,
         currentServer: server,
-        errorMessage: e.toString(),
+        errorMessage: 'Connection failed: ${e.toString()}',
       ));
     }
   }
@@ -99,27 +185,30 @@ class VpnService {
       return;
     }
 
+    if (_flutterV2ray == null) {
+      _updateStatus(VpnStatus(
+        status: VpnConnectionStatus.disconnected,
+      ));
+      return;
+    }
+
     _updateStatus(VpnStatus(
       status: VpnConnectionStatus.disconnecting,
       currentServer: _currentStatus.currentServer,
     ));
 
     try {
-      // В реальном приложении здесь будет вызов нативного VPN API
-      // await _channel.invokeMethod('disconnectVpn');
+      // Останавливаем V2Ray
+      await _flutterV2ray!.stopV2Ray();
       
-      // Временная симуляция (удалите после интеграции реального VPN)
-      await Future.delayed(const Duration(seconds: 1));
-
+      // Статус будет обновлен через callback
+      debugPrint('V2Ray stop command sent');
+    } catch (e) {
+      debugPrint('VPN disconnection error: $e');
+      // Даже при ошибке отключения сбрасываем статус
       _stopSpeedMonitoring();
-
       _updateStatus(VpnStatus(
         status: VpnConnectionStatus.disconnected,
-      ));
-    } catch (e) {
-      _updateStatus(VpnStatus(
-        status: VpnConnectionStatus.error,
-        errorMessage: e.toString(),
       ));
     }
   }
@@ -131,19 +220,14 @@ class VpnService {
 
   void _startSpeedMonitoring() {
     _speedTimer?.cancel();
-    _speedTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_currentStatus.isConnected) {
-        // Симуляция скорости (в реальном приложении получать от VPN API)
-        final uploadSpeed = (1000 + (timer.tick * 50)) % 10000;
-        final downloadSpeed = (5000 + (timer.tick * 100)) % 50000;
-
-        _updateStatus(_currentStatus.copyWith(
-          uploadSpeed: uploadSpeed,
-          downloadSpeed: downloadSpeed,
-        ));
-      } else {
+    // Статистика скорости обновляется автоматически через callback _handleV2RayStatusChanged
+    // Таймер не нужен, так как V2Ray сам отправляет обновления статуса со статистикой
+    // Но оставляем для совместимости на случай, если callback не вызывается регулярно
+    _speedTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!_currentStatus.isConnected) {
         timer.cancel();
       }
+      // Статистика обновляется через callback, здесь просто проверяем подключение
     });
   }
 
@@ -152,9 +236,9 @@ class VpnService {
   }
 
   void dispose() {
-    _connectionTimer?.cancel();
     _speedTimer?.cancel();
     _statusController.close();
+    _flutterV2ray = null;
+    _isInitialized = false;
   }
 }
-

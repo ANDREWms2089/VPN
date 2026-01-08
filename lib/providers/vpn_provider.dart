@@ -23,7 +23,18 @@ class VpnProvider with ChangeNotifier {
       _status = status;
       notifyListeners();
     });
+    // Инициализируем V2Ray при создании провайдера
+    _initializeVpnService();
     loadServers();
+  }
+
+  Future<void> _initializeVpnService() async {
+    try {
+      await _vpnService.initialize();
+      debugPrint('VPN Service initialized');
+    } catch (e) {
+      debugPrint('Error initializing VPN Service: $e');
+    }
   }
 
   Future<void> loadServers() async {

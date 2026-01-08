@@ -63,6 +63,9 @@ dependencies:
   
   # VLESS URL parsing and validation
   v2ray_myanmar: ^1.0.0
+  
+  # V2Ray/Xray core integration for VPN
+  flutter_v2ray: ^1.0.10
 
 dev_dependencies:
   flutter_test:

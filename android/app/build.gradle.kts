@@ -42,3 +42,14 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Kotlin Coroutines для асинхронной работы в VPN Service
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
+    // TODO: Добавьте v2ray-core библиотеку после интеграции
+    // implementation(files("libs/v2ray-core.aar"))
+    // или
+    // implementation("com.github.v2fly:v2ray-core:latest")
+}
