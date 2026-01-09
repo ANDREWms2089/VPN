@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Belchonok VPN',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
+      theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: AppColors.primaryGreen,
@@ -57,8 +57,8 @@ class MyApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-          ),
         ),
+      ),
         home: const SplashScreen(),
       ),
     );

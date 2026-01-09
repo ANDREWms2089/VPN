@@ -58,3 +58,10 @@ backend/.DS_Store
 # OS
 .DS_Store
 Thumbs.db
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+*.cache
+functions/node_modules/

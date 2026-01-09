@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:v2ray_myanmar/v2ray_myanmar.dart';
 import 'package:uuid/uuid.dart';
 import '../theme/app_colors.dart';
 import '../models/vless_server.dart';
@@ -85,34 +84,54 @@ class _SettingsDialogState extends State<SettingsDialog> {
     });
 
     try {
-      // Используем библиотеку v2ray_myanmar для парсинга VLESS URL
-      final parsed = V2rayMyanmar.parseFromURL(url);
-      
+      // Парсим VLESS URL вручную
+      if (!url.startsWith('vless://')) {
+        throw Exception('Неверный формат VLESS URL. Должен начинаться с vless://');
+      }
+
       // Извлекаем UUID из URL (обычно это часть между vless:// и @)
       String uuid = '';
+      String address = '';
+      int port = 443;
+      String? remark;
+      
       try {
+        // Формат: vless://uuid@address:port?params#remark
         final uri = Uri.parse(url);
-        final userInfo = uri.userInfo;
-        if (userInfo.isNotEmpty) {
-          uuid = userInfo;
-        } else {
+        
+        // UUID из userInfo
+        uuid = uri.userInfo;
+        if (uuid.isEmpty) {
           // Пытаемся извлечь из строки напрямую
           final match = RegExp(r'vless://([^@]+)@').firstMatch(url);
           if (match != null) {
             uuid = match.group(1) ?? '';
           }
         }
+        
+        // Адрес и порт
+        address = uri.host;
+        port = uri.port;
+        if (port == 0) port = 443;
+        
+        // Замечание (remark) из fragment
+        remark = uri.fragment.isNotEmpty ? Uri.decodeComponent(uri.fragment) : null;
+        
+        // Проверка валидности UUID
+        if (uuid.isEmpty || uuid.length < 8) {
+          throw Exception('Неверный UUID в VLESS URL');
+        }
+        
+        // Проверка адреса
+        if (address.isEmpty) {
+          throw Exception('Неверный адрес сервера');
+        }
       } catch (e) {
-        // Если не удалось распарсить, генерируем новый UUID
-        uuid = const Uuid().v4();
-      }
-
-      if (uuid.isEmpty) {
-        uuid = const Uuid().v4();
+        throw Exception('Ошибка парсинга URL: ${e.toString()}');
       }
 
       // Извлекаем дополнительные параметры из query string
-      String? path, host, sni, flow, encryption, mode;
+      String? path, host, sni, flow, encryption, mode, security, network;
       try {
         final uri = Uri.parse(url);
         path = uri.queryParameters['path'];
@@ -121,6 +140,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         flow = uri.queryParameters['flow'];
         encryption = uri.queryParameters['encryption'];
         mode = uri.queryParameters['mode'];
+        security = uri.queryParameters['security'];
+        network = uri.queryParameters['type'] ?? uri.queryParameters['network'];
       } catch (e) {
         // Игнорируем ошибки парсинга query параметров
       }
@@ -129,20 +150,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
       // Используем префикс 'custom-' для идентификации пользовательских серверов
       final server = VlessServer(
         id: 'custom-${const Uuid().v4()}',
-        name: parsed.remark.isNotEmpty ? parsed.remark : 'Custom Server',
-        address: parsed.address,
-        port: parsed.port,
+        name: remark ?? 'Custom Server',
+        address: address,
+        port: port,
         uuid: uuid,
         flow: flow,
         encryption: encryption,
-        network: parsed.network.isNotEmpty ? parsed.network : 'tcp',
-        security: parsed.security.isNotEmpty ? parsed.security : 'none',
+        network: network ?? 'tcp',
+        security: security ?? 'none',
         sni: sni,
         path: path,
         host: host,
         mode: mode,
-        country: _getCountryName(parsed.address),
-        flag: _getCountryFlag(parsed.address),
+        country: _getCountryName(address),
+        flag: _getCountryFlag(address),
         isTest: false,
         ping: 0,
         isActive: false,
@@ -154,11 +175,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
       setState(() {
         _parsedConfig = {
-          'Адрес': parsed.address,
-          'Порт': parsed.port.toString(),
-          'Имя': parsed.remark.isNotEmpty ? parsed.remark : 'Custom Server',
-          'Сеть': parsed.network.isNotEmpty ? parsed.network : 'tcp',
-          'Безопасность': parsed.security.isNotEmpty ? parsed.security : 'none',
+          'Адрес': address,
+          'Порт': port.toString(),
+          'UUID': uuid.substring(0, 8) + '...',
+          'Имя': remark ?? 'Custom Server',
+          'Сеть': network ?? 'tcp',
+          'Безопасность': security ?? 'none',
         };
         _successMessage = 'Конфигурация успешно добавлена!\nСервер появится в списке.';
         _errorMessage = null;

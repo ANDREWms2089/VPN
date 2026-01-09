@@ -1,6 +1,6 @@
 # VPN Backend API
 
-Backend сервер для VPN приложения с поддержкой VLESS протокола.
+Backend API для Belchonok VPN приложения с поддержкой VLESS протокола.
 
 ## 🚀 Быстрый старт
 
@@ -10,15 +10,21 @@ Backend сервер для VPN приложения с поддержкой VLE
 npm install
 ```
 
-### Запуск сервера
+### Настройка переменных окружения
 
-**Режим разработки (с автоперезагрузкой):**
+Создайте файл `.env` на основе `.env.example`:
+
 ```bash
-npm run dev
+cp .env.example .env
 ```
 
-**Production режим:**
+### Запуск
+
 ```bash
+# Режим разработки (с автоперезагрузкой)
+npm run dev
+
+# Production режим
 npm start
 ```
 
@@ -26,44 +32,78 @@ npm start
 
 ## 📡 API Endpoints
 
-### GET /api/servers
-Получить список всех VLESS серверов.
+### Health Check
 
-**Параметры запроса:**
-- `includeTest` (опционально) - включить тестовые серверы (по умолчанию `false`)
-
-**Пример запроса:**
-```bash
-GET /api/servers
-GET /api/servers?includeTest=true
+```
+GET /health
 ```
 
-**Ответ:**
+Проверка работоспособности сервера.
+
+**Response:**
 ```json
 {
-  "success": true,
-  "count": 3,
-  "servers": [...]
+  "status": "ok",
+  "timestamp": "2024-01-01T12:00:00.000Z",
+  "uptime": 123.45,
+  "serversCount": 5,
+  "version": "1.0.0"
 }
 ```
 
-### GET /api/servers/:id
-Получить детальную информацию о конкретном сервере.
+### Получить все серверы
 
-**Пример запроса:**
-```bash
-GET /api/servers/nl-reality-1
+```
+GET /api/servers?includeTest=true
 ```
 
-### GET /api/servers/:id/ping
-Проверить ping до сервера.
+**Query параметры:**
+- `includeTest` (optional, default: false) - включить тестовые серверы
 
-**Пример запроса:**
-```bash
-GET /api/servers/nl-reality-1/ping
+**Response:**
+```json
+{
+  "success": true,
+  "count": 5,
+  "servers": [
+    {
+      "id": "nl-reality-1",
+      "name": "Нидерланды 10Гбит/с",
+      "address": "10.nl.vpnpplvpn.top",
+      "port": 443,
+      "uuid": "58a6ce24-fe00-4a0e-8c69-a3381f5a5da1",
+      ...
+    }
+  ]
+}
 ```
 
-**Ответ:**
+### Получить сервер по ID
+
+```
+GET /api/servers/:id
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "server": {
+    "id": "nl-reality-1",
+    ...
+  }
+}
+```
+
+### Проверить ping сервера
+
+```
+GET /api/servers/:id/ping
+```
+
+Выполняет реальную проверку ping через TCP подключение.
+
+**Response:**
 ```json
 {
   "success": true,
@@ -73,38 +113,123 @@ GET /api/servers/nl-reality-1/ping
 }
 ```
 
-### POST /api/connection
-Управление VPN подключением.
+### Добавить сервер
 
-**Тело запроса:**
+```
+POST /api/servers
+Content-Type: application/json
+
+{
+  "id": "new-server-1",
+  "name": "New Server",
+  "address": "example.com",
+  "port": 443,
+  "uuid": "12345678-1234-1234-1234-123456789abc",
+  "country": "Netherlands",
+  "flag": "🇳🇱",
+  ...
+}
+```
+
+**Response:**
 ```json
+{
+  "success": true,
+  "message": "Server added successfully",
+  "server": { ... }
+}
+```
+
+### Обновить сервер
+
+```
+PUT /api/servers/:id
+Content-Type: application/json
+
+{
+  "name": "Updated Server Name",
+  "ping": 50,
+  ...
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Server updated successfully",
+  "server": { ... }
+}
+```
+
+### Удалить сервер
+
+```
+DELETE /api/servers/:id
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Server deleted successfully"
+}
+```
+
+### Управление подключением
+
+```
+POST /api/connection
+Content-Type: application/json
+
 {
   "serverId": "nl-reality-1",
   "action": "connect" // или "disconnect"
 }
 ```
 
-**Ответ (connect):**
+**Response (connect):**
 ```json
 {
   "success": true,
   "message": "Connection initiated",
-  "server": {...},
+  "server": { ... },
   "vlessUrl": "vless://...",
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
 
-### GET /health
-Проверка здоровья сервера.
+## 💾 Хранение данных
 
-**Ответ:**
-```json
+Серверы сохраняются в файл `data/servers.json`. При первом запуске создаются дефолтные серверы, если файл не существует.
+
+### Структура данных сервера
+
+```typescript
 {
-  "status": "ok",
-  "timestamp": "2024-01-01T12:00:00.000Z",
-  "uptime": 3600,
-  "serversCount": 7
+  id: string;                    // Уникальный ID
+  name: string;                  // Название сервера
+  address: string;               // IP или домен
+  port: number;                  // Порт (1-65535)
+  uuid: string;                  // UUID пользователя (формат UUID v4)
+  flow?: string;                 // Flow (например, xtls-rprx-vision)
+  encryption?: string;           // Шифрование
+  network?: string;              // Сеть (tcp, ws, grpc, http)
+  security?: string;             // Безопасность (none, tls, reality)
+  sni?: string;                  // SNI
+  path?: string;                 // Путь (для ws, grpc, http)
+  host?: string;                 // Host header
+  mode?: string;                 // Режим
+  realityServerName?: string;    // Reality server name
+  realityShortId?: string;       // Reality short ID
+  realityPublicKey?: string;     // Reality public key
+  realityFingerprint?: string;   // Reality fingerprint
+  realitySpiderX?: string;       // Reality spiderX
+  country: string;               // Страна
+  flag: string;                  // Флаг (эмодзи)
+  ping: number;                  // Ping в миллисекундах
+  isActive: boolean;             // Активен ли сервер
+  isTest: boolean;               // Тестовый ли сервер
 }
 ```
 
@@ -112,7 +237,7 @@ GET /api/servers/nl-reality-1/ping
 
 ### Переменные окружения
 
-Создайте файл `.env` в корне папки `backend/`:
+Создайте файл `.env`:
 
 ```env
 PORT=3000
@@ -121,79 +246,67 @@ NODE_ENV=development
 
 ### CORS
 
-По умолчанию CORS настроен для всех доменов (`origin: '*'`). В production укажите конкретные домены:
+По умолчанию CORS настроен для всех доменов (`*`). В production укажите конкретные домены:
 
 ```javascript
 app.use(cors({
   origin: ['https://your-frontend-domain.com'],
-  // ...
+  ...
 }));
 ```
 
-## 📝 Структура данных сервера
+## 🧪 Тестирование
 
-```javascript
-{
-  id: 'unique-id',
-  name: 'Server Name',
-  address: 'server.example.com',
-  port: 443,
-  uuid: 'uuid-string',
-  flow: 'xtls-rprx-vision',
-  encryption: 'none',
-  network: 'tcp',
-  security: 'reality',
-  path: '/',
-  host: '',
-  mode: 'auto',
-  realityServerName: 'vpnforppl.top',
-  realityShortId: 'short-id',
-  realityPublicKey: 'public-key',
-  realityFingerprint: 'chrome',
-  realitySpiderX: '',
-  country: 'Country Name',
-  flag: '🇳🇱',
-  ping: 35,
-  isActive: false,
-  isTest: false
-}
+Проверка работы API:
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Получить серверы
+curl http://localhost:3000/api/servers
+
+# Проверить ping
+curl http://localhost:3000/api/servers/nl-reality-1/ping
 ```
-
-## 🔐 Безопасность
-
-В production рекомендуется:
-
-1. Добавить аутентификацию (JWT токены)
-2. Ограничить CORS конкретными доменами
-3. Добавить rate limiting
-4. Использовать HTTPS
-5. Валидировать все входящие данные
 
 ## 📦 Зависимости
 
-- `express` - веб-фреймворк
-- `cors` - обработка CORS
-- `dotenv` - переменные окружения
+- `express` - Web framework
+- `cors` - CORS middleware
+- `dotenv` - Переменные окружения
 
-## 🛠️ Разработка
+### Dev зависимости
 
-### Добавление нового сервера
+- `nodemon` - Автоперезагрузка в режиме разработки
 
-Отредактируйте массив `servers` в `server.js`:
+## 🚀 Production
 
-```javascript
-{
-  id: 'new-server-id',
-  name: 'New Server',
-  // ... остальные параметры
-}
+Для production:
+
+1. Установите `NODE_ENV=production`
+2. Настройте CORS для конкретных доменов
+3. Используйте процесс-менеджер (PM2, systemd)
+4. Настройте HTTPS через reverse proxy (nginx)
+5. Рассмотрите использование базы данных (MongoDB, PostgreSQL)
+
+## 📝 Логирование
+
+Все запросы логируются в консоль с временной меткой:
+```
+2024-01-01T12:00:00.000Z - GET /api/servers
 ```
 
-### Интеграция с базой данных
+## 🔒 Безопасность
 
-Для production рекомендуется использовать базу данных (MongoDB, PostgreSQL и т.д.) вместо хранения серверов в памяти.
+Для production рекомендуется:
+
+1. Добавить аутентификацию (JWT, OAuth)
+2. Настроить rate limiting
+3. Валидировать все входные данные
+4. Использовать HTTPS
+5. Настроить firewall
 
 ## 📄 Лицензия
 
 ISC
-

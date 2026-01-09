@@ -1,0 +1,49 @@
+╔══════════════════════════════════════════════════════════════╗
+║         🚀 БЫСТРЫЙ СТАРТ: Деплой на Firebase                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+1️⃣  ВОЙТИ В FIREBASE:
+   firebase login
+
+2️⃣  СОЗДАТЬ ПРОЕКТ (выберите один вариант):
+   
+   Вариант A - через консоль:
+   → Откройте https://console.firebase.google.com/
+   → Нажмите "Add project"
+   → Введите название: vpn-front
+   
+   Вариант B - через CLI:
+   → firebase projects:create vpn-front
+   → firebase use vpn-front
+
+3️⃣  ИНИЦИАЛИЗИРОВАТЬ:
+   firebase init
+   
+   Выберите:
+   ✓ Functions
+   ✓ Hosting (опционально)
+   
+   Используйте существующий проект → выберите vpn-front
+   Язык → JavaScript
+   ESLint → Нет
+   Установить зависимости → Да
+
+4️⃣  ЗАДЕПЛОИТЬ:
+   ./deploy.sh
+   
+   Или вручную:
+   firebase deploy --only functions
+
+5️⃣  СКОПИРОВАТЬ URL API:
+   После деплоя скопируйте URL вида:
+   https://us-central1-vpn-front.cloudfunctions.net/api
+
+6️⃣  ОБНОВИТЬ URL В ПРИЛОЖЕНИИ:
+   Отредактируйте lib/services/api_service.dart:
+   
+   Замените baseUrl на:
+   'https://us-central1-YOUR-PROJECT-ID.cloudfunctions.net/api/api'
+
+✅ ГОТОВО! API работает на Firebase!
+
+📖 Подробная инструкция: QUICK_FIREBASE_DEPLOY.md

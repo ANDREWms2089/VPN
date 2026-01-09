@@ -1,19 +1,18 @@
+const functions = require('firebase-functions');
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs').promises;
 const path = require('path');
-require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const SERVERS_FILE = path.join(__dirname, 'data', 'servers.json');
 
-// Middleware
+// CORS настройка для Firebase
 app.use(cors({
-  origin: '*', // В production укажите конкретные домены
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 app.use(express.json());
 
 // Логирование запросов
@@ -22,28 +21,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Убеждаемся что папка data существует
-async function ensureDataDirectory() {
-  const dataDir = path.join(__dirname, 'data');
+// Путь к файлу с серверами (в Firebase Functions используем tmp директорию)
+const SERVERS_FILE = path.join('/tmp', 'servers.json');
+
+// Убеждаемся что файл существует
+async function ensureServersFile() {
   try {
-    await fs.access(dataDir);
+    await fs.access(SERVERS_FILE);
   } catch {
-    await fs.mkdir(dataDir, { recursive: true });
+    // Файл не существует, создаем с дефолтными серверами
+    const defaultServers = getDefaultServers();
+    await saveServers(defaultServers);
   }
 }
 
-// Загрузка серверов из файла или использование дефолтных
+// Загрузка серверов из файла
 async function loadServers() {
   try {
+    await ensureServersFile();
     const data = await fs.readFile(SERVERS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      // Файл не существует, используем дефолтные серверы
-      const defaultServers = getDefaultServers();
-      await saveServers(defaultServers);
-      return defaultServers;
-    }
     console.error('Error loading servers:', error);
     return getDefaultServers();
   }
@@ -52,7 +50,6 @@ async function loadServers() {
 // Сохранение серверов в файл
 async function saveServers(servers) {
   try {
-    await ensureDataDirectory();
     await fs.writeFile(SERVERS_FILE, JSON.stringify(servers, null, 2), 'utf8');
   } catch (error) {
     console.error('Error saving servers:', error);
@@ -62,7 +59,6 @@ async function saveServers(servers) {
 // Дефолтные серверы
 function getDefaultServers() {
   return [
-    // Реальный сервер из Нидерландов (Reality)
     {
       id: 'nl-reality-1',
       name: 'Нидерланды 10Гбит/с',
@@ -88,7 +84,6 @@ function getDefaultServers() {
       isActive: false,
       isTest: false,
     },
-    // Реальный сервер из России (Reality)
     {
       id: 'ru-reality-1',
       name: 'Россия (31210_25141)',
@@ -114,7 +109,6 @@ function getDefaultServers() {
       isActive: false,
       isTest: false,
     },
-    // Реальный сервер из Санкт-Петербурга
     {
       id: 'spb-1',
       name: 'Россия, Санкт-Петербург',
@@ -140,7 +134,6 @@ function getDefaultServers() {
       isActive: false,
       isTest: false,
     },
-    // Тестовые серверы (для демонстрации)
     {
       id: 'test-1',
       name: 'Netherlands #1 (Тест)',
@@ -166,92 +159,19 @@ function getDefaultServers() {
       isActive: false,
       isTest: true,
     },
-    {
-      id: 'test-2',
-      name: 'United States #1 (Тест)',
-      address: 'us1.example.com',
-      port: 443,
-      uuid: '12345678-1234-1234-1234-123456789abd',
-      flow: 'xtls-rprx-vision',
-      encryption: 'none',
-      network: 'tcp',
-      security: 'tls',
-      sni: 'us1.example.com',
-      path: null,
-      host: null,
-      mode: null,
-      realityServerName: null,
-      realityShortId: null,
-      realityPublicKey: null,
-      realityFingerprint: null,
-      realitySpiderX: null,
-      country: 'United States',
-      flag: '🇺🇸',
-      ping: 120,
-      isActive: false,
-      isTest: true,
-    },
-    {
-      id: 'test-3',
-      name: 'Germany #1 (Тест)',
-      address: 'de1.example.com',
-      port: 443,
-      uuid: '12345678-1234-1234-1234-123456789abe',
-      flow: 'xtls-rprx-vision',
-      encryption: 'none',
-      network: 'tcp',
-      security: 'tls',
-      sni: 'de1.example.com',
-      path: null,
-      host: null,
-      mode: null,
-      realityServerName: null,
-      realityShortId: null,
-      realityPublicKey: null,
-      realityFingerprint: null,
-      realitySpiderX: null,
-      country: 'Germany',
-      flag: '🇩🇪',
-      ping: 65,
-      isActive: false,
-      isTest: true,
-    },
-    {
-      id: 'test-4',
-      name: 'Japan #1 (Тест)',
-      address: 'jp1.example.com',
-      port: 443,
-      uuid: '12345678-1234-1234-1234-123456789abf',
-      flow: 'xtls-rprx-vision',
-      encryption: 'none',
-      network: 'tcp',
-      security: 'tls',
-      sni: 'jp1.example.com',
-      path: null,
-      host: null,
-      mode: null,
-      realityServerName: null,
-      realityShortId: null,
-      realityPublicKey: null,
-      realityFingerprint: null,
-      realitySpiderX: null,
-      country: 'Japan',
-      flag: '🇯🇵',
-      ping: 180,
-      isActive: false,
-      isTest: true,
-    },
   ];
 }
 
 // Глобальная переменная для хранения серверов
 let servers = [];
 
-// Инициализация серверов при запуске
-loadServers().then(data => {
-  servers = data;
-  console.log(`✅ Loaded ${servers.length} servers from storage`);
-});
+// Инициализация при первом запросе
+async function initServers() {
+  if (servers.length === 0) {
+    servers = await loadServers();
+  }
+  return servers;
+}
 
 // Валидация сервера
 function validateServer(server) {
@@ -266,7 +186,6 @@ function validateServer(server) {
     throw new Error('Invalid port number');
   }
   
-  // Валидация UUID формата
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(server.uuid)) {
     throw new Error('Invalid UUID format');
@@ -286,12 +205,10 @@ function generateVlessUrl(server) {
   if (server.security) params.push(`security=${encodeURIComponent(server.security)}`);
   if (server.flow) params.push(`flow=${encodeURIComponent(server.flow)}`);
   if (server.sni) params.push(`sni=${encodeURIComponent(server.sni)}`);
-  // Reality параметры
   if (server.realityFingerprint) params.push(`fp=${encodeURIComponent(server.realityFingerprint)}`);
   if (server.realityPublicKey) params.push(`pbk=${encodeURIComponent(server.realityPublicKey)}`);
   if (server.realityShortId) params.push(`sid=${encodeURIComponent(server.realityShortId)}`);
   if (server.realitySpiderX) params.push(`spx=${encodeURIComponent(server.realitySpiderX)}`);
-  // Для Reality serverName используется как sni
   if (server.realityServerName && !server.sni) {
     params.push(`sni=${encodeURIComponent(server.realityServerName)}`);
   }
@@ -300,14 +217,14 @@ function generateVlessUrl(server) {
   return `vless://${server.uuid}@${server.address}:${server.port}${query}#${encodeURIComponent(server.name)}`;
 }
 
-// Реальная проверка ping (использует TCP подключение)
+// Проверка ping (упрощенная версия для Cloud Functions)
 async function checkPing(server) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     const net = require('net');
     
     const socket = new net.Socket();
-    const timeout = 3000; // 3 секунды таймаут
+    const timeout = 3000;
     
     socket.setTimeout(timeout);
     
@@ -319,13 +236,11 @@ async function checkPing(server) {
     
     socket.once('timeout', () => {
       socket.destroy();
-      // Возвращаем базовый ping с небольшим отклонением
       resolve(server.ping || 100);
     });
     
     socket.once('error', () => {
       socket.destroy();
-      // Возвращаем базовый ping с небольшим отклонением
       const basePing = server.ping || 100;
       resolve(Math.floor(basePing + (Math.random() * 20) - 10));
     });
@@ -336,21 +251,20 @@ async function checkPing(server) {
 
 // ========== API Endpoints ==========
 
-// GET /health - Health check
+// GET /health
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
     serversCount: servers.length,
     version: '1.0.0',
   });
 });
 
-// GET /api/servers - Get all VLESS servers
+// GET /api/servers
 app.get('/api/servers', async (req, res) => {
   try {
-    // Фильтрация по isTest, если нужно
+    await initServers();
     const includeTest = req.query.includeTest === 'true';
     let filteredServers = [...servers];
     
@@ -358,7 +272,6 @@ app.get('/api/servers', async (req, res) => {
       filteredServers = filteredServers.filter(s => !s.isTest);
     }
     
-    // Сортировка: сначала реальные серверы, потом тестовые, затем по ping
     filteredServers.sort((a, b) => {
       if (a.isTest !== b.isTest) {
         return a.isTest ? 1 : -1;
@@ -381,9 +294,10 @@ app.get('/api/servers', async (req, res) => {
   }
 });
 
-// GET /api/servers/:id - Get specific server details
-app.get('/api/servers/:id', (req, res) => {
+// GET /api/servers/:id
+app.get('/api/servers/:id', async (req, res) => {
   try {
+    await initServers();
     const serverId = req.params.id;
     const server = servers.find(s => s.id === serverId);
     
@@ -408,9 +322,10 @@ app.get('/api/servers/:id', (req, res) => {
   }
 });
 
-// GET /api/servers/:id/ping - Ping a specific server
+// GET /api/servers/:id/ping
 app.get('/api/servers/:id/ping', async (req, res) => {
   try {
+    await initServers();
     const serverId = req.params.id;
     const server = servers.find(s => s.id === serverId);
     
@@ -421,10 +336,7 @@ app.get('/api/servers/:id/ping', async (req, res) => {
       });
     }
 
-    // Реальная проверка ping
     const ping = await checkPing(server);
-    
-    // Обновляем ping в списке серверов
     server.ping = ping;
     await saveServers(servers);
     
@@ -444,12 +356,12 @@ app.get('/api/servers/:id/ping', async (req, res) => {
   }
 });
 
-// POST /api/servers - Add new server
+// POST /api/servers
 app.post('/api/servers', async (req, res) => {
   try {
+    await initServers();
     const server = req.body;
     
-    // Проверка существования сервера с таким ID
     if (servers.find(s => s.id === server.id)) {
       return res.status(400).json({
         success: false,
@@ -457,10 +369,8 @@ app.post('/api/servers', async (req, res) => {
       });
     }
     
-    // Валидация
     validateServer(server);
     
-    // Добавляем сервер
     servers.push(server);
     await saveServers(servers);
     
@@ -479,9 +389,10 @@ app.post('/api/servers', async (req, res) => {
   }
 });
 
-// PUT /api/servers/:id - Update server
+// PUT /api/servers/:id
 app.put('/api/servers/:id', async (req, res) => {
   try {
+    await initServers();
     const serverId = req.params.id;
     const serverIndex = servers.findIndex(s => s.id === serverId);
     
@@ -493,8 +404,6 @@ app.put('/api/servers/:id', async (req, res) => {
     }
     
     const updatedServer = { ...servers[serverIndex], ...req.body };
-    
-    // Валидация
     validateServer(updatedServer);
     
     servers[serverIndex] = updatedServer;
@@ -515,9 +424,10 @@ app.put('/api/servers/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/servers/:id - Delete server
+// DELETE /api/servers/:id
 app.delete('/api/servers/:id', async (req, res) => {
   try {
+    await initServers();
     const serverId = req.params.id;
     const serverIndex = servers.findIndex(s => s.id === serverId);
     
@@ -545,9 +455,10 @@ app.delete('/api/servers/:id', async (req, res) => {
   }
 });
 
-// POST /api/connection - Handle connection requests
+// POST /api/connection
 app.post('/api/connection', async (req, res) => {
   try {
+    await initServers();
     const { serverId, action } = req.body;
     
     if (!serverId || !action) {
@@ -597,7 +508,7 @@ app.post('/api/connection', async (req, res) => {
   }
 });
 
-// Обработка ошибок 404
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -606,7 +517,7 @@ app.use((req, res) => {
   });
 });
 
-// Обработка ошибок сервера
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({
@@ -616,19 +527,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Запуск сервера на всех интерфейсах (0.0.0.0) для доступа из эмулятора
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 VPN Backend API running on http://0.0.0.0:${PORT}`);
-  console.log(`📡 Available at:`);
-  console.log(`   - http://localhost:${PORT} (local)`);
-  console.log(`   - http://10.0.2.2:${PORT} (Android emulator)`);
-  console.log(`📡 Available endpoints:`);
-  console.log(`   GET    /health`);
-  console.log(`   GET    /api/servers`);
-  console.log(`   GET    /api/servers/:id`);
-  console.log(`   GET    /api/servers/:id/ping`);
-  console.log(`   POST   /api/servers`);
-  console.log(`   PUT    /api/servers/:id`);
-  console.log(`   DELETE /api/servers/:id`);
-  console.log(`   POST   /api/connection`);
-});
+// Экспорт Express приложения как Cloud Function
+exports.api = functions.https.onRequest(app);
+
+
