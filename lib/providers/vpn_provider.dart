@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/vless_server.dart';
 import '../models/vpn_status.dart';
@@ -12,6 +13,7 @@ class VpnProvider with ChangeNotifier {
   List<VlessServer> _servers = [];
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<VpnStatus>? _statusSubscription;
 
   VpnStatus get status => _status;
   List<VlessServer> get servers => _servers;
@@ -19,11 +21,15 @@ class VpnProvider with ChangeNotifier {
   String? get error => _error;
 
   VpnProvider() {
-    _vpnService.statusStream.listen((status) {
-      _status = status;
-      notifyListeners();
-    });
-    // Инициализируем V2Ray при создании провайдера
+    _statusSubscription = _vpnService.statusStream.listen(
+      (status) {
+        _status = status;
+        notifyListeners();
+      },
+      onError: (error) {
+        debugPrint('VPN status stream error: $error');
+      },
+    );
     _initializeVpnService();
     loadServers();
   }
@@ -108,6 +114,8 @@ class VpnProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _statusSubscription?.cancel();
+    _statusSubscription = null;
     _vpnService.dispose();
     super.dispose();
   }

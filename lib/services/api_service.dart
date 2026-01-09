@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/vless_server.dart';
@@ -9,21 +8,14 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Автоматическое определение URL бэкенда в зависимости от платформы
+
+  // URL PHP бэкенда на Render
   static String get baseUrl {
-    // Для Android эмулятора используем специальный IP
-    if (!kIsWeb && Platform.isAndroid) {
-      // Android эмулятор использует 10.0.2.2 для доступа к localhost хоста
-      return 'http://10.0.2.2:3000/api';
-    }
-    // Для iOS симулятора и десктопа - localhost
-    // В production замените на реальный URL вашего сервера
-    // Например: 'https://your-backend-api.com/api'
-    return 'http://localhost:3000/api';
+    // Используем бэкенд на Render для всех платформ
+    return 'https://belchonok-vpn-backend.onrender.com/api';
   }
   
   // Использовать реальный API вместо моковых данных
-  // Установите false для подключения к реальному бэкенду
   static const bool useMockData = false;
 
   Future<List<VlessServer>> getServers() async {
@@ -34,14 +26,14 @@ class ApiService {
         return _getMockServers();
       }
 
-      // Пытаемся подключиться к бэкенду с таймаутом
+      // Пытаемся подключиться к PHP бэкенду с таймаутом
       final response = await http.get(
-        Uri.parse('$baseUrl/servers'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/servers.php'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       ).timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          throw Exception('Backend connection timeout. Please make sure the backend is running on $baseUrl');
+          throw Exception('PHP Backend connection timeout. Please make sure the backend is running on $baseUrl');
         },
       );
 
@@ -93,8 +85,8 @@ class ApiService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/servers/${server.id}/ping'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/ping.php?id=${server.id}'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
       );
 
       if (response.statusCode == 200) {

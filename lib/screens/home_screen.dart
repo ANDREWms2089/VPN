@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animations/animations.dart';
@@ -327,15 +328,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         children: [
           if (status.isConnected && status.connectedAt != null)
-            Text(
-              'Connected ${_formatDuration(status.connectedAt!)}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Sansation',
-                fontSize: 12,
-                color: AppColors.accentOrange,
-              ),
-            ),
+            _ConnectedDurationText(connectedAt: status.connectedAt!),
           const SizedBox(height: 16),
             ElevatedButton.icon(
             onPressed: () => _showServerSelection(context, vpnProvider),
@@ -404,6 +397,33 @@ class _HomeScreenState extends State<HomeScreen>
       return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
     }
   }
+}
+
+class _ConnectedDurationText extends StatefulWidget {
+  final DateTime connectedAt;
+
+  const _ConnectedDurationText({required this.connectedAt});
+
+  @override
+  State<_ConnectedDurationText> createState() => _ConnectedDurationTextState();
+}
+
+class _ConnectedDurationTextState extends State<_ConnectedDurationText> {
+  Timer? _updateTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatDuration(DateTime startTime) {
     final duration = DateTime.now().difference(startTime);
@@ -418,6 +438,19 @@ class _HomeScreenState extends State<HomeScreen>
     } else {
       return '${seconds}s';
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Connected ${_formatDuration(widget.connectedAt)}',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontFamily: 'Sansation',
+        fontSize: 12,
+        color: AppColors.accentOrange,
+      ),
+    );
   }
 }
 

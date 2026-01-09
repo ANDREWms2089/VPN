@@ -160,20 +160,7 @@ class _ServersScreenState extends State<ServersScreen> {
     VpnProvider vpnProvider,
     bool isCurrent,
   ) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (server.hashCode % 100)),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           gradient: isCurrent
@@ -325,8 +312,7 @@ class _ServersScreenState extends State<ServersScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildPingIndicator(int ping, bool isCurrent) {

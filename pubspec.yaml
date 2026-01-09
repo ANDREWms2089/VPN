@@ -60,6 +60,12 @@ dependencies:
   
   # Google Fonts (для Sansation или альтернативы)
   google_fonts: ^6.1.0
+  
+  # V2Ray/Xray core для реального VPN подключения
+  flutter_v2ray_plus: ^1.0.15
+  
+  # VLESS URL parsing
+  v2ray_myanmar: ^1.0.0
 
 dev_dependencies:
   flutter_test:

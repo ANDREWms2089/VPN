@@ -12,17 +12,13 @@ class ConfigGenerator {
       'log': {
         'loglevel': 'warning',
       },
-      'inbounds': _generateInbounds(),
+      // Для VPN режима inbounds не нужны - flutter_v2ray_plus создает VPN интерфейс автоматически
+      'inbounds': [],
       'outbounds': [
         _generateOutbound(server),
         {
           'protocol': 'freedom',
           'tag': 'direct',
-          'settings': {},
-        },
-        {
-          'protocol': 'blackhole',
-          'tag': 'blocked',
           'settings': {},
         },
       ],
@@ -39,26 +35,6 @@ class ConfigGenerator {
     return config;
   }
 
-  /// Генерирует inbound конфигурацию (локальный SOCKS/HTTP прокси)
-  static List<Map<String, dynamic>> _generateInbounds() {
-    return [
-      {
-        'port': 10808,
-        'protocol': 'socks',
-        'settings': {
-          'auth': 'noauth',
-          'udp': true,
-        },
-        'tag': 'socks',
-      },
-      {
-        'port': 10809,
-        'protocol': 'http',
-        'settings': {},
-        'tag': 'http',
-      },
-    ];
-  }
 
   /// Генерирует outbound конфигурацию для VLESS сервера
   static Map<String, dynamic> _generateOutbound(VlessServer server) {
@@ -73,7 +49,9 @@ class ConfigGenerator {
               {
                 'id': server.uuid,
                 'encryption': server.encryption ?? 'none',
-                'flow': server.flow,
+                // flow добавляем только если он указан (не null и не пустой)
+                if (server.flow != null && server.flow!.isNotEmpty)
+                  'flow': server.flow!,
               }
             ],
           }
@@ -97,48 +75,56 @@ class ConfigGenerator {
     if (server.security != null && server.security != 'none') {
       streamSettings['security'] = server.security;
 
-      final tlsSettings = <String, dynamic>{};
-
       if (server.security == 'reality') {
         // Reality настройки
-        if (server.realityServerName != null) {
-          tlsSettings['serverName'] = server.realityServerName;
+        final realitySettings = <String, dynamic>{};
+        if (server.realityServerName != null && server.realityServerName!.isNotEmpty) {
+          realitySettings['serverName'] = server.realityServerName;
         }
-        if (server.realityFingerprint != null) {
-          tlsSettings['fingerprint'] = server.realityFingerprint;
+        if (server.realityFingerprint != null && server.realityFingerprint!.isNotEmpty) {
+          realitySettings['fingerprint'] = server.realityFingerprint;
         }
-        if (server.realityPublicKey != null) {
-          tlsSettings['publicKey'] = server.realityPublicKey;
+        if (server.realityPublicKey != null && server.realityPublicKey!.isNotEmpty) {
+          realitySettings['publicKey'] = server.realityPublicKey;
         }
-        if (server.realityShortId != null) {
-          tlsSettings['shortId'] = server.realityShortId;
+        if (server.realityShortId != null && server.realityShortId!.isNotEmpty) {
+          realitySettings['shortId'] = server.realityShortId;
         }
-        if (server.realitySpiderX != null) {
-          tlsSettings['spiderX'] = server.realitySpiderX;
+        if (server.realitySpiderX != null && server.realitySpiderX!.isNotEmpty) {
+          realitySettings['spiderX'] = server.realitySpiderX;
         }
-        streamSettings['realitySettings'] = tlsSettings;
+        if (realitySettings.isNotEmpty) {
+          streamSettings['realitySettings'] = realitySettings;
+        }
       } else if (server.security == 'tls') {
         // TLS настройки
+        final tlsConfig = <String, dynamic>{
+          'allowInsecure': false,
+        };
+        // serverName для TLS (используем sni или address как fallback)
         if (server.sni != null && server.sni!.isNotEmpty) {
-          tlsSettings['serverName'] = server.sni;
+          tlsConfig['serverName'] = server.sni;
+        } else if (server.address.isNotEmpty) {
+          tlsConfig['serverName'] = server.address;
         }
-        tlsSettings['allowInsecure'] = false;
-        streamSettings['tlsSettings'] = tlsSettings;
-      }
-
-      if (tlsSettings.isNotEmpty && server.security != 'reality') {
-        streamSettings['${server.security}Settings'] = tlsSettings;
+        streamSettings['tlsSettings'] = tlsConfig;
       }
     }
 
     // Настройки транспорта по типу сети
     switch (network) {
       case 'ws':
+        final wsHeaders = <String, String>{};
+        // Для WebSocket Host должен быть в заголовках, если указан
+        if (server.host != null && server.host!.isNotEmpty) {
+          wsHeaders['Host'] = server.host!;
+        } else if (server.address.isNotEmpty) {
+          // Если host не указан, используем address как fallback
+          wsHeaders['Host'] = server.address;
+        }
         streamSettings['wsSettings'] = {
           'path': server.path ?? '/',
-          'headers': {
-            if (server.host != null) 'Host': server.host!,
-          },
+          if (wsHeaders.isNotEmpty) 'headers': wsHeaders,
         };
         break;
       case 'grpc':
@@ -148,9 +134,12 @@ class ConfigGenerator {
         };
         break;
       case 'http':
+      case 'xhttp':
         streamSettings['httpSettings'] = {
           'path': server.path ?? '/',
-          'host': server.host?.split(',') ?? [],
+          'host': (server.host?.isNotEmpty == true) 
+              ? server.host!.split(',').map((h) => h.trim()).where((h) => h.isNotEmpty).toList()
+              : [],
         };
         break;
       case 'tcp':
@@ -164,7 +153,7 @@ class ConfigGenerator {
                 'method': 'GET',
                 'path': [server.path ?? '/'],
                 'headers': {
-                  if (server.host != null) 'Host': [server.host!],
+                  if (server.host != null && server.host!.isNotEmpty) 'Host': [server.host!],
                   'User-Agent': [
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                   ],
@@ -187,21 +176,14 @@ class ConfigGenerator {
     return {
       'domainStrategy': 'IPIfNonMatch',
       'rules': [
+        // Только приватные IP идут напрямую (локальная сеть)
         {
           'type': 'field',
           'ip': ['geoip:private'],
           'outboundTag': 'direct',
         },
-        {
-          'type': 'field',
-          'protocol': ['bittorrent'],
-          'outboundTag': 'blocked',
-        },
-        {
-          'type': 'field',
-          'domain': ['geosite:category-ads-all'],
-          'outboundTag': 'blocked',
-        },
+        // Весь остальной трафик идет через VPN (proxy - первый outbound)
+        // Явное правило не требуется, так как proxy используется по умолчанию
       ],
     };
   }

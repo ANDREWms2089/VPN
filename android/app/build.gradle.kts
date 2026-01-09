@@ -24,7 +24,7 @@ android {
         applicationId = "com.example.vpn_front"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion  // Минимум 23 для VPN функциональности
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -35,6 +35,17 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+    
+    packaging {
+        jniLibs {
+            // Разрешаем конфликт дублирующихся нативных библиотек
+            // Используем первую найденную библиотеку (из flutter_v2ray_plus)
+            pickFirsts += listOf("**/libtun2socks.so")
+            pickFirsts += listOf("**/libv2ray.so")
+            pickFirsts += listOf("**/libxray.so")
+            pickFirsts += listOf("**/lib*.so")
         }
     }
 }

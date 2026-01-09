@@ -4,12 +4,15 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.BIND_VPN_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 14+ требует разрешение для specialUse foreground service (используется библиотекой) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     
     <application
         android:label="Belchonok VPN"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -38,8 +41,8 @@
             android:name="flutterEmbedding"
             android:value="2" />
         
-        <!-- VPN Service управляется через flutter_v2ray пакет -->
-        <!-- Старый BelchonokVpnService больше не нужен -->
+        <!-- VPN Service управляется через flutter_v2ray_plus пакет -->
+        <!-- Библиотека использует foregroundServiceType="specialUse" с подтипом "vpn" -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
